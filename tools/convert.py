@@ -49,7 +49,10 @@ for r in rows:
     items.append(it)
 
 TPE = datetime.timezone(datetime.timedelta(hours=8))
-updated = datetime.datetime.fromtimestamp(os.path.getmtime(src), tz=TPE).strftime("%Y-%m-%d %H:%M")
+if os.path.exists(src + ".updated"):  # fetch_onedrive.py 留下的雲端修改時間
+    updated = open(src + ".updated").read().strip()
+else:
+    updated = datetime.datetime.fromtimestamp(os.path.getmtime(src), tz=TPE).strftime("%Y-%m-%d %H:%M")
 os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
 with open(dst, "w", encoding="utf-8") as f:
     json.dump({"updated": updated, "items": items}, f, ensure_ascii=False, separators=(",", ":"))
