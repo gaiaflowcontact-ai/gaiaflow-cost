@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gaia Flow 成本計算器</title>
+<meta name="theme-color" content="#2f4a3a">
+<style>
+:root{
+  --bg:#f6f3ec; --card:#fffdf8; --ink:#25302a; --muted:#6f776f; --line:#e4ded1;
+  --brand:#2f4a3a; --brand-ink:#fff; --accent:#c8743a;
+  --ok:#2e7d4f; --ok-bg:#e6f2ea; --check:#9a6b00; --check-bg:#fff3d6; --bad:#b3382c; --bad-bg:#fbe7e4;
+  --radius:14px; --shadow:0 1px 2px rgba(40,40,20,.06),0 4px 14px rgba(40,40,20,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#151a17; --card:#1e2521; --ink:#e8ebe6; --muted:#9aa39b; --line:#2f3832;
+  --brand:#8fc3a2; --brand-ink:#10170f; --accent:#e39a62;
+  --ok:#7fd3a0; --ok-bg:#1d3527; --check:#f1c45e; --check-bg:#3a3018; --bad:#f08b80; --bad-bg:#3d2220;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+header{background:var(--brand);color:var(--brand-ink);padding:18px 16px 16px}
+header h1{margin:0;font-size:20px;letter-spacing:.02em}
+header p{margin:2px 0 0;font-size:13px;opacity:.8}
+main{max-width:720px;margin:0 auto;padding:12px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin:12px 0}
+label.small{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,textarea,select,button{font:inherit;color:inherit}
+input[type=text],input[type=number],input[type=search],textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+textarea{min-height:88px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:8px;align-items:center}
+.btn{border:0;border-radius:10px;min-height:44px;padding:0 16px;background:var(--brand);color:var(--brand-ink);font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+.btn.mic{width:48px;padding:0;font-size:20px;flex:none}
+.btn.mic.on{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.5}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+.tabs{display:flex;gap:6px;margin-top:12px}
+.tabs button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:40px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.item{border-left:4px solid var(--line);padding-left:12px;margin:14px 0}
+.item.ok{border-color:var(--ok)} .item.check{border-color:var(--check)} .item.none{border-color:var(--bad)}
+.item .raw{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.badge{font-size:12px;border-radius:99px;padding:1px 8px;white-space:nowrap}
+.ok .badge{background:var(--ok-bg);color:var(--ok)} .check .badge{background:var(--check-bg);color:var(--check)} .none .badge{background:var(--bad-bg);color:var(--bad)}
+.item .pick{margin:6px 0}
+.item .line{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+.item .grams{position:relative}
+.item .grams input{padding-right:30px}
+.item .grams span{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+.sub{min-width:72px;text-align:right;font-weight:600}
+.del{background:none;border:0;color:var(--muted);font-size:22px;width:36px;min-height:44px;cursor:pointer}
+.warn{font-size:13px;color:var(--bad);margin-top:4px}
+.searchbox{margin-top:6px}
+.results{list-style:none;margin:6px 0 0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.results li{padding:10px 12px;border-top:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.results li:first-child{border-top:0}
+.results li:hover,.results li:focus{background:var(--bg)}
+.results small{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:18px 0;font-size:14px}
+.totals{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.totals .wrap{max-width:720px;margin:0 auto}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px;align-items:end}
+.tgrid div small{display:block;font-size:12px;color:var(--muted)}
+.tgrid div b{font-size:18px}
+.tgrid input{min-height:36px;padding:4px 8px}
+.tmore{display:flex;gap:8px;margin-top:8px;align-items:center;font-size:13px;color:var(--muted)}
+.tmore input{width:70px;min-height:34px;padding:4px 8px}
+.tmore .btn{min-height:34px;padding:0 12px;margin-left:auto;font-size:14px}
+.toast{position:fixed;left:50%;bottom:170px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Gaia Flow 成本計算器</h1>
+  <p id="meta">載入食材總表中…</p>
+</header>
+
+<main>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="calc">算成本</button>
+    <button role="tab" aria-selected="false" data-tab="lookup">查單價</button>
+  </div>
+
+  <section id="tab-calc">
+    <div class="card">
+      <label class="small" for="dish">餐點名稱（選填）</label>
+      <input id="dish" type="text" placeholder="例：蘿蔔和蘿蔔糕">
+      <label class="small" for="say" style="margin-top:12px">說或打出食材和克數</label>
+      <textarea id="say" placeholder="蘿蔔糕130克、櫻桃蘿蔔30克、海鹽0.2克、青醬12克"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn mic" id="mic" title="語音輸入" aria-label="語音輸入">🎤</button>
+        <button class="btn" id="go" style="flex:1">辨識並加入</button>
+      </div>
+      <p class="hint">不支援麥克風按鈕的手機，可以用鍵盤上的麥克風口述。綠色＝已確定，黃色＝請確認，紅色＝找不到。</p>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <b>食材清單</b>
+        <div class="row">
+          <button class="btn ghost" id="add" style="min-height:36px">＋ 手動加</button>
+          <button class="btn ghost" id="clear" style="min-height:36px">清空</button>
+        </div>
+      </div>
+      <div id="list"></div>
+    </div>
+  </section>
+
+  <section id="tab-lookup" hidden>
+    <div class="card">
+      <label class="small" for="q">搜尋食材或配料</label>
+      <input id="q" type="search" placeholder="例：橄欖油、PREP19、樹薯粉">
+      <ul class="results" id="qres" hidden></ul>
+    </div>
+  </section>
+</main>
+
+<div class="totals" id="totals">
+  <div class="wrap">
+    <div class="tgrid">
+      <div><small>總重量 (g)</small><input id="tw" type="number" inputmode="decimal" class="num"></div>
+      <div><small>總成本</small><b class="num" id="tc">$0</b></div>
+      <div><small>每克成本</small><b class="num" id="tp">–</b></div>
+    </div>
+    <div class="tmore">
+      <span>份數</span><input id="srv" type="number" inputmode="numeric" min="1" value="1" class="num">
+      <span id="per" class="num"></span>
+      <button class="btn ghost" id="copy">複製結果</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="matcher.js"></script>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+  const money = (x) => "$" + (Math.round(x * 100) / 100).toLocaleString("zh-TW", { maximumFractionDigits: 2 });
+  const ppgText = (x) => (x > 0 ? "$" + (+x.toFixed(4)) + "/g" : "無單價");
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const toast = (t) => { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 1800); };
+
+  let matcher, items = [];
+  let memory = store.get("gf-memory", {});
+  let rows = store.get("gf-rows", []);   // {name, grams, id, status, cands:[id], key}
+  let weightOverride = store.get("gf-weight", null);
+  const keyOf = (it) => it.id || "name:" + it.name;
+  const itemOf = (key) => items.find((it) => keyOf(it) === key);
+
+  async function load() {
+    const v = "?v=" + Date.now();
+    const [d, a, p] = await Promise.all(["data/ingredients.json", "data/aliases.json", "data/pinyin.json"].map((u, i) =>
+      fetch(u + (i === 0 ? v : "")).then((r) => r.json())));
+    items = d.items;
+    matcher = GFMatcher.createMatcher(items, { aliases: a, pinyin: p });
+    $("#meta").textContent = `食材總表更新於 ${d.updated}・共 ${items.length} 項`;
+    $("#dish").value = store.get("gf-dish", "");
+    render();
+  }
+
+  function save() { store.set("gf-rows", rows); store.set("gf-weight", weightOverride); store.set("gf-dish", $("#dish").value); }
+
+  function addFromText() {
+    const text = $("#say").value.trim();
+    if (!text || !matcher) return;
+    const parsed = GFMatcher.parse(text);
+    if (!parsed.length) { toast("沒有辨識到食材"); return; }
+    for (const p of parsed) {
+      const r = matcher.match(p.name, memory);
+      const top = r.candidates[0];
+      rows.push({ name: p.name, grams: p.grams, key: top && r.status !== "none" ? keyOf(top.item) : null, status: r.status, cands: r.candidates.map((c) => keyOf(c.item)) });
+    }
+    $("#say").value = "";
+    save(); render();
+    const need = parsed.length - rows.slice(-parsed.length).filter((x) => x.status === "ok").length;
+    toast(`加入 ${parsed.length} 項` + (need ? `，${need} 項請確認` : ""));
+  }
+
+  function render() {
+    const list = $("#list");
+    if (!rows.length) { list.innerHTML = `<div class="empty">還沒有食材。上面說一句，或按「＋ 手動加」。</div>`; totals(); return; }
+    list.innerHTML = rows.map((r, i) => {
+      const it = r.key && itemOf(r.key);
+      const label = { ok: "已確定", check: "請確認", none: "找不到" }[r.status];
+      const opts = (r.cands || []).map((k) => { const c = itemOf(k); return c ? `<option value="${esc(k)}" ${k === r.key ? "selected" : ""}>${esc((c.id || "無ID") + " " + c.name)}・${esc(c.cat)}・${ppgText(c.ppg)}</option>` : ""; }).join("");
+      const sub = it && r.grams ? r.grams * it.ppg : 0;
+      return `<div class="item ${r.status}" data-i="${i}">
+        <div class="raw"><span>「${esc(r.name)}」</span><span class="badge">${label}</span></div>
+        <div class="pick">
+          <select data-act="pick" aria-label="選擇食材">
+            ${r.key ? "" : `<option value="" selected>— 請選擇 —</option>`}
+            ${opts}
+            <option value="__search">🔍 搜尋其他…</option>
+          </select>
+          <div class="searchbox" hidden>
+            <input type="search" data-act="search" placeholder="輸入食材名稱或 ID">
+            <ul class="results" hidden></ul>
+          </div>
+        </div>
+        <div class="line">
+          <div class="grams"><input type="number" inputmode="decimal" data-act="grams" value="${r.grams ?? ""}" placeholder="克數" class="num" aria-label="克數"><span>g</span></div>
+          <div class="sub num">${it ? money(sub) : "–"}</div>
+          <button class="del" data-act="del" aria-label="刪除">×</button>
+        </div>
+        ${it && !(it.ppg > 0) ? `<div class="warn">食材總表還沒有這項的單價，成本以 0 計算</div>` : ""}
+        ${r.grams == null ? `<div class="warn">請填克數</div>` : ""}
+      </div>`;
+    }).join("");
+    totals();
+  }
+
+  function totals() {
+    let w = 0, c = 0;
+    for (const r of rows) { const it = r.key && itemOf(r.key); w += +r.grams || 0; if (it) c += (+r.grams || 0) * it.ppg; }
+    const tw = $("#tw");
+    if (document.activeElement !== tw) tw.value = weightOverride ?? (Math.round(w * 100) / 100 || "");
+    tw.placeholder = Math.round(w * 100) / 100;
+    const weight = weightOverride || w;
+    $("#tc").textContent = money(c);
+    $("#tp").textContent = weight ? "$" + (c / weight).toFixed(4) : "–";
+    const n = Math.max(1, +$("#srv").value || 1);
+    $("#per").textContent = n > 1 && weight ? `每份 ${(weight / n).toFixed(1)}g・${money(c / n)}` : "";
+    totals.last = { w, weight, c, n };
+  }
+
+  function choose(i, key) {
+    const r = rows[i];
+    r.key = key; r.status = "ok";
+    if (!r.cands.includes(key)) r.cands.unshift(key);
+    if (r.name) { memory[GFMatcher.norm(r.name)] = itemOf(key).id || undefined; store.set("gf-memory", memory); }
+    save(); render();
+  }
+
+  $("#list").addEventListener("change", (e) => {
+    const el = e.target, box = el.closest(".item"); if (!box) return;
+    const i = +box.dataset.i;
+    if (el.dataset.act === "pick") {
+      if (el.value === "__search") { const sb = box.querySelector(".searchbox"); sb.hidden = false; sb.querySelector("input").focus(); el.value = rows[i].key || ""; }
+      else if (el.value) choose(i, el.value);
+    }
+  });
+  $("#list").addEventListener("input", (e) => {
+    const el = e.target, box = el.closest(".item"); if (!box) return;
+    const i = +box.dataset.i;
+    if (el.dataset.act === "grams") {
+      rows[i].grams = el.value === "" ? null : +el.value; save();
+      const it = rows[i].key && itemOf(rows[i].key);
+      box.querySelector(".sub").textContent = it ? money((+el.value || 0) * it.ppg) : "–";
+      totals();
+    }
+    if (el.dataset.act === "search") showResults(el.nextElementSibling, el.value, (key) => choose(i, key));
+  });
+  $("#list").addEventListener("click", (e) => {
+    const el = e.target, box = el.closest(".item"); if (!box) return;
+    if (el.dataset.act === "del") { rows.splice(+box.dataset.i, 1); save(); render(); }
+  });
+
+  function showResults(ul, text, onPick) {
+    const res = matcher ? matcher.search(text, 10) : [];
+    ul.hidden = !text.trim();
+    ul.innerHTML = res.length ? res.map((c) => `<li tabindex="0" data-k="${esc(keyOf(c.item))}"><span>${esc((c.item.id || "無ID") + " " + c.item.name)}<br><small>${esc(c.item.cat)}</small></span><span class="num">${ppgText(c.item.ppg)}</span></li>`).join("")
+      : `<li><small>找不到符合的品項</small></li>`;
+    ul.onclick = (e) => { const li = e.target.closest("li[data-k]"); if (li && onPick) onPick(li.dataset.k); };
+  }
+
+  $("#go").onclick = addFromText;
+  $("#say").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) addFromText(); });
+  $("#add").onclick = () => {
+    rows.push({ name: "", grams: null, key: null, status: "none", cands: [] }); save(); render();
+    const last = $("#list").lastElementChild; const sb = last.querySelector(".searchbox"); sb.hidden = false; sb.querySelector("input").focus();
+  };
+  $("#clear").onclick = () => { if (!rows.length || confirm("清空目前的食材清單？")) { rows = []; weightOverride = null; save(); render(); } };
+  $("#dish").oninput = save;
+  $("#tw").oninput = (e) => { const v = e.target.value; weightOverride = v === "" || +v === totals.last.w ? null : +v; save(); totals(); };
+  $("#tw").onblur = () => totals();
+  $("#srv").oninput = totals;
+
+  $("#copy").onclick = async () => {
+    const t = totals.last; const lines = [];
+    if ($("#dish").value) lines.push($("#dish").value);
+    for (const r of rows) { const it = r.key && itemOf(r.key); lines.push(`${it ? it.name : r.name}${it && it.id ? "（" + it.id + "）" : ""} ${r.grams ?? "?"}g ${it ? money((+r.grams || 0) * it.ppg) : "未對應"}`); }
+    lines.push(`總重量 ${t.weight}g・總成本 ${money(t.c)}・每克 $${t.weight ? (t.c / t.weight).toFixed(4) : "-"}`);
+    if (t.n > 1) lines.push(`${t.n} 份・每份 ${(t.weight / t.n).toFixed(1)}g・${money(t.c / t.n)}`);
+    try { await navigator.clipboard.writeText(lines.join("\n")); toast("已複製"); } catch (e) { prompt("複製以下內容", lines.join("\n")); }
+  };
+
+  // 查單價
+  $("#q").addEventListener("input", (e) => showResults($("#qres"), e.target.value, null));
+  document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $("#tab-calc").hidden = b.dataset.tab !== "calc"; $("#tab-lookup").hidden = b.dataset.tab !== "lookup";
+    $("#totals").hidden = b.dataset.tab !== "calc";
+  });
+
+  // 語音輸入
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const mic = $("#mic");
+  if (!SR) mic.hidden = true;
+  else {
+    let rec = null;
+    mic.onclick = () => {
+      if (rec) { rec.stop(); return; }
+      rec = new SR(); rec.lang = "zh-TW"; rec.interimResults = false; rec.continuous = true;
+      const base = $("#say").value ? $("#say").value.replace(/\s*$/, "、") : "";
+      let heard = "";
+      rec.onresult = (e) => { heard = [...e.results].map((x) => x[0].transcript).join("、"); $("#say").value = base + heard; };
+      rec.onend = () => { rec = null; mic.classList.remove("on"); };
+      rec.onerror = (e) => { if (e.error === "not-allowed") toast("請允許使用麥克風"); };
+      rec.start(); mic.classList.add("on"); toast("說完再按一次 🎤");
+    };
+  }
+
+  load().catch((e) => { $("#meta").textContent = "食材資料載入失敗，請重新整理"; console.error(e); });
+})();
+</script>
+</body>
+</html>
