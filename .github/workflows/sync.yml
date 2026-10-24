@@ -32,8 +32,10 @@ jobs:
         env:
           ONEDRIVE_URL: ${{ secrets.ONEDRIVE_URL }}
         run: |
-          if [ -z "$ONEDRIVE_URL" ]; then echo "尚未設定 ONEDRIVE_URL"; exit 1; fi
-          python3 tools/fetch_onedrive.py "$ONEDRIVE_URL" 食材總表.xlsx
+          set -o pipefail
+          { date -u -d '+8 hours' '+%Y-%m-%d %H:%M（台北時間）'; } > sync-log.txt
+          if [ -z "$ONEDRIVE_URL" ]; then echo "尚未設定 ONEDRIVE_URL" | tee -a sync-log.txt; exit 1; fi
+          python3 tools/fetch_onedrive.py "$ONEDRIVE_URL" 食材總表.xlsx 2>&1 | tee -a sync-log.txt
 
       - name: 轉成網頁資料
         if: steps.fetch.outcome == 'success'
@@ -47,6 +49,7 @@ jobs:
         run: |
           mkdir -p _site
           cp -r index.html matcher.js data _site/
+          [ -f sync-log.txt ] && cp sync-log.txt _site/ || true
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -7,6 +7,7 @@
 import base64
 import datetime
 import email.utils
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -30,7 +31,15 @@ def get(url):
 
 
 token = "u!" + base64.urlsafe_b64encode(share.encode()).decode().rstrip("=")
-attempts = [
+attempts = []
+
+# 新版個人 OneDrive 連結：https://1drv.ms/x/c/<cid>/<token>
+m = re.search(r"1drv\.ms/\w/c/([0-9a-fA-F]+)/([\w-]+)", share)
+if m:
+    cid, tok = m.group(1), m.group(2)
+    attempts.append(("新版連結 download.aspx",
+                     lambda: get(f"https://my.microsoftpersonalcontent.com/personal/{cid}/_layouts/15/download.aspx?share={tok}")))
+attempts += [
     ("分享連結 + download=1", lambda: get(with_param(share, "download", "1"))),
     ("OneDrive shares API (root)", lambda: get(f"https://api.onedrive.com/v1.0/shares/{token}/root/content")),
     ("OneDrive shares API (driveItem)", lambda: get(f"https://api.onedrive.com/v1.0/shares/{token}/driveItem/content")),
@@ -39,6 +48,8 @@ attempts = [
 
 def after_redirect():
     _, _, final = get(share)
+    p = urllib.parse.urlsplit(final)
+    print(f"  （分享連結轉址到 {p.netloc}{p.path[:40]}）")
     return get(with_param(final, "download", "1"))
 
 
