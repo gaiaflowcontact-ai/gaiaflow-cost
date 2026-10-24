@@ -164,7 +164,7 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-
       fetch(u + (i === 0 ? v : "")).then((r) => r.json())));
     items = d.items;
     matcher = GFMatcher.createMatcher(items, { aliases: a, pinyin: p });
-    $("#meta").textContent = `食材總表更新於 ${d.updated}・共 ${items.length} 項`;
+    $("#meta").textContent = `價格資料同步於 ${d.updated}・共 ${items.length} 項`;
     $("#dish").value = store.get("gf-dish", "");
     render();
   }
